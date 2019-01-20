@@ -3,10 +3,9 @@ local font_secondary = draw.CreateFont( "Small Fonts", 10, 10 )
 
 -- Script --------
 local cur_scriptname = GetScriptName()
-local cur_version = "1.0"
-local git_version = "https://raw.githubusercontent.com/hyperthegreat/aw_translate/master/version.txt"
-local git_repository = "https://raw.githubusercontent.com/hyperthegreat/aw_translate/master/version.txt"
-local run_outdated = false
+local cur_version = "1.1"
+local git_version = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/version.txt"
+local git_repository = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/slickesp.lua"
 ------------------
 
 -- GUI Elements --
@@ -29,13 +28,13 @@ local chb_enemy_weapon = gui.Checkbox(gb_slickesp_enemy, "esp_enemy_slickesp_wea
 local chb_team_weapon = gui.Checkbox(gb_slickesp_team, "esp_team_slickesp_weapon", "Weapon", 1)
 ------------------
 
+
 -- Check for updates
 if cur_version ~= http.Get(git_version) then
 	if not gui.GetValue("lua_allow_cfg") then
 		print("[Update] " .. cur_scriptname .. " is outdated. Please enable Lua Allow Config and Lua Editing under Settings")
-		if not run_outdated then
-			RunScript(cur_scriptname)
-		end
+		print(http.Get(git_version))
+		print(cur_version)
 	else
 		local this_script = file.Open(cur_scriptname, "w")
 		this_script:Write(http.Get(git_repository))
@@ -43,6 +42,8 @@ if cur_version ~= http.Get(git_version) then
 		print("[Update] " .. cur_scriptname .. " has updated itself from version " .. cur_version .. " to " .. http.Get(git_version))
 		RunScript(cur_scriptname)
 	end
+else
+	print("[Update] " .. cur_scriptname .. " is up-to-date")
 end
 
 local Misc_bottomsize = 25
@@ -170,7 +171,7 @@ local function ESPCallback(EspBuilder)
 		draw.Color( 200, 200, 200, 255 * Misc_fadealpha)
 		draw.TextShadow(EspRect[3] + select(1, draw.GetTextSize(Ent_ping)), EspRect[2], "ms")
 		
-	elseif ( (Ent_isTeam and cob_team_ping:GetValue() == 2) or (not Ent_isTeam and cob_enemy_ping:GetValue() == 2) ) and not Ent_isLocal then0
+	elseif ( (Ent_isTeam and cob_team_ping:GetValue() == 2) or (not Ent_isTeam and cob_enemy_ping:GetValue() == 2) ) and not Ent_isLocal then
 		draw.SetFont(font_secondary)
 		local pingColor = {0, 120, 200, 255}
 		local plusSign = ""
