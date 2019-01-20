@@ -11,12 +11,20 @@ local git_repository = "https://raw.githubusercontent.com/itisluiz/aimware_slick
 -- GUI Elements --
 local ref_vis_enemy_options = gui.Reference( "VISUALS", "ENEMIES", "Options" )
 local ref_vis_team_options = gui.Reference( "VISUALS", "TEAMMATES", "Options" )
+local ref_vis_shared = gui.Reference( "VISUALS", "Shared" )
 
-local gb_slickesp_enemy = gui.Groupbox(ref_vis_enemy_options, "Slick ESP by Nyanpasu!", 0, 775, 213, 170)
-local gb_slickesp_team = gui.Groupbox(ref_vis_team_options, "Slick ESP by Nyanpasu!", 0, 775, 213, 170)
+local gb_slickesp_enemy = gui.Groupbox(ref_vis_enemy_options, "Slick ESP by Nyanpasu!", 0, 775, 213, 195)
+local gb_slickesp_team = gui.Groupbox(ref_vis_team_options, "Slick ESP by Nyanpasu!", 0, 775, 213, 195)
+local gb_slickesp_shared = gui.Groupbox(ref_vis_shared, "Slick ESP by Nyanpasu!", 0, 390, 213, 100)
+
+local sli_bottomsize = gui.Slider(gb_slickesp_shared, "esp_slickesp_bottomsize", "Bottom Minimum Size", 25, 25, 75)
+local chb_weaponsize = gui.Checkbox(gb_slickesp_shared, "esp_slickesp_weaponsize", "Resize on Weapon Name", 1)
 
 local chb_enemy_name = gui.Checkbox(gb_slickesp_enemy, "esp_enemy_slickesp_name", "Name", 1)
 local chb_team_name = gui.Checkbox(gb_slickesp_team, "esp_team_slickesp_name", "Name", 1)
+
+local chb_enemy_dis = gui.Checkbox(gb_slickesp_enemy, "esp_enemy_slickesp_name", "Distance", 1)
+local chb_team_dis = gui.Checkbox(gb_slickesp_team, "esp_team_slickesp_name", "Distance", 1)
 
 local cob_enemy_health = gui.Combobox(gb_slickesp_enemy, "esp_enemy_slickesp_health", "Health", "Off", "Bar", "Bar and Number")
 local cob_team_health = gui.Combobox(gb_slickesp_team, "esp_team_slickesp_health", "Health", "Off", "Bar", "Bar and Number")
@@ -47,12 +55,28 @@ local function git_update()
 	end
 end
 
-git_update()
+if gui.GetValue("lua_allow_http") then
+	git_update()
+else
+	print("[Update] Please enable Lua HTTP to check for updates")
+end
 
-local Misc_bottomsize = 25
-local PlayerData = {}
+
+-- Some functions from EssentialsNP file so that the script can stay standalone
+local function vector3_subtract(input0, input1) 
+	-- Subtracts vector input1 from input0
+	return {input0[1] - input1[1], input0[2] - input1[2], input0[3] - input1[3]};
+end
+	
+local function vector3_hypotenuse(input0, input1) 
+	-- Gets the hypotenuse between input0 and input1
+	local vectorDelta = vector3_subtract(input0, input1);
+	
+	return math.sqrt(vectorDelta[1] ^ 2 + vectorDelta[2] ^ 2 + vectorDelta[3] ^ 2);	
+end
 
 local function color_gradient(input0, input1, input2)
+	-- Calculates a gradient between the vectors input1 and input2 with input0 as the coefficient (0 - 1)
 	input0 = (math.max(math.min(input0, 1), 0))
 	
 	local red = math.floor(  input0 * input2[1]) + ( (1 - input0) * input1[1] )
@@ -62,6 +86,8 @@ local function color_gradient(input0, input1, input2)
 	
 	return red, green, blue, alpha;
 end
+
+local PlayerData = {}
 
 local function ESPCallback(EspBuilder)
 	
@@ -80,9 +106,9 @@ local function ESPCallback(EspBuilder)
 	
 	draw.SetFont(font_secondary)
 	local Misc_hp_size = {draw.GetTextSize("HP:")}
-	local Misc_hp_width = (EspRect[3] - Rect_width/2 +  Misc_bottomsize - 2) - (1 + EspRect[1] + Rect_width/2 - Misc_bottomsize + Misc_hp_size[1])
 	local Misc_hp = EspEnt:GetHealth() / EspEnt:GetMaxHealth()
-	local Misc_hp_gap = 0
+	local Misc_bottom_count = 0
+	local Misc_side_count = 0
 	
 	draw.SetFont(font_main)
 	local Ent_index = EspEnt:GetIndex()
@@ -131,11 +157,25 @@ local function ESPCallback(EspBuilder)
 		draw.Text(EspRect[1] + Rect_width/2 - Ent_name_size[1]/2, EspRect[2] - Ent_name_size[2], Ent_name)
 	end
 	
+	local Misc_bottomsize = sli_bottomsize:GetValue()
 	local BRect_width = (EspRect[3] - Rect_width/2 +  Misc_bottomsize) - (EspRect[1] + Rect_width/2 - Misc_bottomsize)
+	local Misc_hp_width = (EspRect[3] - Rect_width/2 +  Misc_bottomsize - 2) - (1 + EspRect[1] + Rect_width/2 - Misc_bottomsize + Misc_hp_size[1])
+	
+	-- If weapon rectangle adjust bottom size
+	if ( (Ent_isTeam and chb_team_weapon:GetValue()) or (not Ent_isTeam and chb_enemy_weapon:GetValue()) ) and chb_weaponsize:GetValue() and Ent_weapon ~= nil then	
+		draw.SetFont(font_secondary)
+		if select(1, draw.GetTextSize(Ent_weapon:GetName())) * 0.75 > Misc_bottomsize then
+			Misc_bottomsize = select(1, draw.GetTextSize(Ent_weapon:GetName())) * 0.75
+			BRect_width = (EspRect[3] - Rect_width/2 +  Misc_bottomsize) - (EspRect[1] + Rect_width/2 - Misc_bottomsize)
+			Misc_hp_width = (EspRect[3] - Rect_width/2 +  Misc_bottomsize - 2) - (1 + EspRect[1] + Rect_width/2 - Misc_bottomsize + Misc_hp_size[1])
+		end		
+	end
 	
 	-- HP rectangle
 	if (Ent_isTeam and cob_team_health:GetValue() > 0) or (not Ent_isTeam and cob_enemy_health:GetValue() > 0) then
+		
 		local Misc_hp_color = {color_gradient(Misc_hp, {gui.GetValue("clr_esp_bar_health2")}, {gui.GetValue("clr_esp_bar_health1")})}
+		
 		draw.Color( 40, 40, 40, 170 * Misc_fadealpha)
 		draw.FilledRect(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4], EspRect[3] - Rect_width/2 +  Misc_bottomsize, EspRect[4] + Misc_hp_size[2])
 		draw.Color( 10, 10, 10, 170 * Misc_fadealpha)
@@ -149,22 +189,26 @@ local function ESPCallback(EspBuilder)
 		if (Ent_isTeam and cob_team_health:GetValue() > 1) or (not Ent_isTeam and cob_enemy_health:GetValue() > 1) then
 			draw.TextShadow( (1 + EspRect[1] + Rect_width/2 - Misc_bottomsize + Misc_hp_size[1]) + (Misc_hp_width * Misc_hp) - select(1, draw.GetTextSize(EspEnt:GetHealth())) / 2, EspRect[4] + Misc_hp_size[2]/2 - Ent_name_size[2]/2, EspEnt:GetHealth())
 		end
-		Misc_hp_gap = 1
+		
+		Misc_bottom_count = Misc_bottom_count + 1
 	end
 	
 	-- Weapon rectangle
-	if (Ent_isTeam and chb_team_weapon:GetValue()) or (not Ent_isTeam and chb_enemy_weapon:GetValue()) then
+	if ( (Ent_isTeam and chb_team_weapon:GetValue()) or (not Ent_isTeam and chb_enemy_weapon:GetValue()) ) and Ent_weapon ~= nil then	
 		draw.Color( 40, 40, 40, 170 * Misc_fadealpha)
-		draw.FilledRect(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4] + (Misc_hp_size[2] * Misc_hp_gap) + 1, EspRect[3] - Rect_width/2 +  Misc_bottomsize, EspRect[4] + Misc_hp_size[2] + (Misc_hp_size[2] * Misc_hp_gap))
+		draw.FilledRect(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4] + (Misc_hp_size[2] * Misc_bottom_count) + 1, EspRect[3] - Rect_width/2 +  Misc_bottomsize, EspRect[4] + Misc_hp_size[2] + (Misc_hp_size[2] * Misc_bottom_count))
 		draw.Color( 10, 10, 10, 170 * Misc_fadealpha)
-		draw.OutlinedRect(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4] + (Misc_hp_size[2] * Misc_hp_gap) + 1, EspRect[3] - Rect_width/2 +  Misc_bottomsize, EspRect[4] + Misc_hp_size[2] + (Misc_hp_size[2] * Misc_hp_gap))
+		draw.OutlinedRect(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4] + (Misc_hp_size[2] * Misc_bottom_count) + 1, EspRect[3] - Rect_width/2 +  Misc_bottomsize, EspRect[4] + Misc_hp_size[2] + (Misc_hp_size[2] * Misc_bottom_count))
 		draw.Color( 200, 200, 200, 255 * Misc_fadealpha)
 		-- draw.Line(EspRect[1] + Rect_width/2 - Misc_bottomsize, EspRect[4] + Misc_hp_size[2] + 1, EspRect[1] + Rect_width/2 - Misc_bottomsize + (BRect_width * 1) - 1, EspRect[4] + Misc_hp_size[2] + 1) -- For future use
 		draw.SetFont(font_secondary)
-		draw.Text(EspRect[1] + Rect_width/2 - select(1, draw.GetTextSize(Ent_weapon:GetName())) / 2, EspRect[4] + Misc_hp_size[2]/2 - Ent_name_size[2]/2 + (Misc_hp_size[2] * Misc_hp_gap) + 1, Ent_weapon:GetName() )
+		draw.Text(EspRect[1] + Rect_width/2 - select(1, draw.GetTextSize(Ent_weapon:GetName())) / 2, EspRect[4] + Misc_hp_size[2]/2 - Ent_name_size[2]/2 + (Misc_hp_size[2] * Misc_bottom_count) + 1, Ent_weapon:GetName() )
+		
+		Misc_bottom_count = Misc_bottom_count + 1
 	end
 	
-	-- Side ping difference
+	
+	-- Side ping
 	if ( (Ent_isTeam and cob_team_ping:GetValue() == 1) or (not Ent_isTeam and cob_enemy_ping:GetValue() == 1) ) and Ent_ping > 0 then
 		local pingColor = {color_gradient(Ent_ping/300, {255, 255, 255, 255}, {255, 70, 0, 255})}
 		
@@ -174,6 +218,7 @@ local function ESPCallback(EspBuilder)
 		draw.Color( 200, 200, 200, 255 * Misc_fadealpha)
 		draw.TextShadow(EspRect[3] + select(1, draw.GetTextSize(Ent_ping)), EspRect[2], "ms")
 		
+		Misc_side_count = Misc_side_count + 1
 	elseif ( (Ent_isTeam and cob_team_ping:GetValue() == 2) or (not Ent_isTeam and cob_enemy_ping:GetValue() == 2) ) and not Ent_isLocal then
 		draw.SetFont(font_secondary)
 		local pingColor = {0, 120, 200, 255}
@@ -186,7 +231,24 @@ local function ESPCallback(EspBuilder)
 		draw.TextShadow(EspRect[3], EspRect[2], plusSign .. Local_ping - Ent_ping)
 		draw.Color( 200, 200, 200, 255 * Misc_fadealpha)
 		draw.TextShadow(EspRect[3] + select(1, draw.GetTextSize(plusSign .. Local_ping - Ent_ping)), EspRect[2], "ms")
+		
+		Misc_side_count = Misc_side_count + 1
 	end
+	
+	-- Side distance
+	if ((Ent_isTeam and chb_team_dis:GetValue()) or (not Ent_isTeam and chb_enemy_dis:GetValue())) and not Ent_isLocal then
+		local distance = math.floor(vector3_hypotenuse({EntLocal:GetAbsOrigin()}, {EspEnt:GetAbsOrigin()}) / 52.49)
+		
+		draw.SetFont(font_secondary)	
+		draw.Color( 255, 255, 255, 255 * Misc_fadealpha)
+		draw.TextShadow(EspRect[3], EspRect[2] + (select(2, draw.GetTextSize(Ent_ping)) * Misc_side_count), distance)
+		draw.Color( 200, 200, 200, 255 * Misc_fadealpha)
+		draw.TextShadow(EspRect[3] + select(1, draw.GetTextSize(distance)), EspRect[2] + (select(2, draw.GetTextSize(Ent_ping)) * Misc_side_count), "m")
+	
+		Misc_side_count = Misc_side_count + 1
+	end
+	
+	
 	
 end
 
