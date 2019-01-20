@@ -6,6 +6,7 @@ local cur_scriptname = GetScriptName()
 local cur_version = "1.1"
 local git_version = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/version.txt"
 local git_repository = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/slickesp.lua"
+local cur_updated = false
 ------------------
 
 -- GUI Elements --
@@ -28,21 +29,30 @@ local chb_enemy_weapon = gui.Checkbox(gb_slickesp_enemy, "esp_enemy_slickesp_wea
 local chb_team_weapon = gui.Checkbox(gb_slickesp_team, "esp_team_slickesp_weapon", "Weapon", 1)
 ------------------
 
-
 -- Check for updates
-if cur_version ~= http.Get(git_version) then
-	if not gui.GetValue("lua_allow_cfg") then
-		print("[Update] " .. cur_scriptname .. " is outdated. Please enable Lua Allow Config and Lua Editing under Settings")
+local function git_update()
+	if cur_version ~= http.Get(git_version) then
+		if not gui.GetValue("lua_allow_cfg") then
+			print("[Update] " .. cur_scriptname .. " is outdated. Please enable Lua Allow Config and Lua Editing under Settings")
+			print(http.Get(git_version))
+			print(cur_version)
+		else
+			local this_script = file.Open(cur_scriptname, "w")
+			this_script:Write(http.Get(git_repository))
+			this_script:Close()
+			print("[Update] " .. cur_scriptname .. " has updated itself from version " .. cur_version .. " to " .. http.Get(git_version))
+			RunScript(cur_scriptname)
+		end
 	else
-		local this_script = file.Open(cur_scriptname, "w")
-		this_script:Write(http.Get(git_repository))
-		this_script:Close()
-		print("[Update] " .. cur_scriptname .. " has updated itself from version " .. cur_version .. " to " .. http.Get(git_version))
-		print("[Update] Please reload " .. cur_scriptname)
+		print("[Update] " .. cur_scriptname .. " is up-to-date")
 	end
-else
-	print("[Update] " .. cur_scriptname .. " is up-to-date")
+	cur_updated = true
 end
+
+if not cur_updated then
+	git_update()
+end
+
 
 local Misc_bottomsize = 25
 local PlayerData = {}
