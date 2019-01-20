@@ -6,7 +6,6 @@ local cur_scriptname = GetScriptName()
 local cur_version = "1.1"
 local git_version = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/version.txt"
 local git_repository = "https://raw.githubusercontent.com/itisluiz/aimware_slickesp/master/slickesp.lua"
-local cur_updated = false
 ------------------
 
 -- GUI Elements --
@@ -41,18 +40,12 @@ local function git_update()
 			this_script:Write(http.Get(git_repository))
 			this_script:Close()
 			print("[Update] " .. cur_scriptname .. " has updated itself from version " .. cur_version .. " to " .. http.Get(git_version))
-			RunScript(cur_scriptname)
+			print("[Update] Please reload " .. cur_scriptname)
 		end
 	else
 		print("[Update] " .. cur_scriptname .. " is up-to-date")
 	end
-	cur_updated = true
 end
-
-if not cur_updated then
-	git_update()
-end
-
 
 local Misc_bottomsize = 25
 local PlayerData = {}
