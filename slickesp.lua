@@ -47,6 +47,8 @@ local function git_update()
 	end
 end
 
+git_update()
+
 local Misc_bottomsize = 25
 local PlayerData = {}
 
